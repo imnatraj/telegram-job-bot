@@ -10,11 +10,11 @@ export default async function handler(req, res) {
     return res.status(200).send("✅ Job Bot is running.");
   }
 
-  res.status(200).json({ ok: true });
-
   try {
     const { message } = req.body ?? {};
-    if (!message?.text) return;
+    if (!message?.text) {
+      return res.status(200).json({ ok: true });
+    }
 
     const chatId = message.chat.id;
     const text   = String(message.text).trim();
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       await sendMessage(chatId,
         "🚀 *Job Bot Ready\\!*\n\nTry:\n👉 `/jobs nodejs chennai`\n👉 `/jobs backend remote`"
       );
-      return;
+      return res.status(200).json({ ok: true });
     }
 
     if (text.startsWith("/jobs")) {
@@ -33,44 +33,51 @@ export default async function handler(req, res) {
         await sendMessage(chatId,
           "⚠️ Add keywords after `/jobs`\nExample: `/jobs react remote`"
         );
-        return;
+        return res.status(200).json({ ok: true });
       }
 
+      // Tell user we are searching
       await sendMessage(chatId,
         `🔍 Searching jobs for: *${escape(query)}*\\.\\.\\.`
       );
 
+      // Fetch from JSearch
       const jobs = await fetchJobs(query);
 
       if (jobs === null) {
         await sendMessage(chatId,
           "❌ *JSearch quota exceeded\\.* Check your RapidAPI dashboard \\— the free tier has a monthly cap\\."
         );
-        return;
+        return res.status(200).json({ ok: true });
       }
 
       if (!jobs.length) {
         await sendMessage(chatId,
           "😕 *No jobs found* for those keywords\\. Try something broader\\."
         );
-        return;
+        return res.status(200).json({ ok: true });
       }
 
+      // Send header
       await sendMessage(chatId, `🔥 *Found ${jobs.length} Jobs*\n━━━━━━━━━━━━━━`);
 
+      // Send each job as its own message
       for (let i = 0; i < jobs.length; i++) {
         await sendMessage(chatId, formatJob(jobs[i], i + 1));
       }
 
-      return;
+      return res.status(200).json({ ok: true });
     }
 
+    // Default reply
     await sendMessage(chatId,
       "💡 Type `/jobs <keyword> <location>` to search for open positions\\."
     );
+    return res.status(200).json({ ok: true });
 
   } catch (err) {
     console.error("Handler error:", err);
+    return res.status(200).json({ ok: true }); // always return 200 to Telegram
   }
 }
 
@@ -99,16 +106,16 @@ async function fetchJobs(query) {
   if (!Array.isArray(json.data)) return [];
 
   return json.data.slice(0, 5).map(j => ({
-    title    : j.job_title        || "Untitled Position",
-    company  : j.employer_name    || "Unknown Company",
+    title    : j.job_title             || "Untitled Position",
+    company  : j.employer_name         || "Unknown Company",
     location : j.job_city && j.job_country
                  ? `${j.job_city}, ${j.job_country}`
-                 : (j.job_country || "Remote"),
-    type     : j.job_employment_type || "",
+                 : (j.job_country      || "Remote"),
+    type     : j.job_employment_type   || "",
     posted   : j.job_posted_at_datetime_utc
                  ? new Date(j.job_posted_at_datetime_utc).toDateString()
                  : "",
-    link     : j.job_apply_link || "",
+    link     : j.job_apply_link        || "",
   }));
 }
 
