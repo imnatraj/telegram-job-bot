@@ -98,7 +98,7 @@ async function fetchJobs(query) {
   const json = await res.json();
   if (!Array.isArray(json.data)) return [];
 
-  return json.data.slice(0, 3).map(j => ({
+  return json.data.slice(0, 5).map(j => ({
     title      : j.job_title        || "Untitled Position",
     company    : j.employer_name    || "Unknown Company",
     location   : j.job_city && j.job_country
@@ -117,7 +117,7 @@ function formatJobs(jobs) {
     t += `*${i + 1}\\. ${escape(j.title)}*\n`;
     t += `🏢 ${escape(j.company)}\n`;
     t += `📍 ${escape(j.location)}\n`;
-    t += `📝 _${escape(truncate(j.description, 130))}_\n\n`;
+    t += `📝 _${escape(truncate(j.description, 300))}_\n\n`;
     if (j.link) t += `🔗 [Apply Here](${j.link})\n`;
     t += "\n━━━━━━━━━━━━━━\n\n";
   });
