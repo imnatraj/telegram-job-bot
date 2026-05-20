@@ -6,12 +6,10 @@ const RAPIDAPI_KEY   = process.env.RAPIDAPI_KEY;
 const TELEGRAM_API   = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
 
 export default async function handler(req, res) {
-  // Health check — visiting the URL in a browser shows this
   if (req.method !== "POST") {
     return res.status(200).send("✅ Job Bot is running.");
   }
 
-  // Always return 200 fast so Telegram stops retrying
   res.status(200).json({ ok: true });
 
   try {
@@ -38,18 +36,15 @@ export default async function handler(req, res) {
         return;
       }
 
-      // 1. Acknowledge instantly — user sees this in ~200ms
       await sendMessage(chatId,
         `🔍 Searching jobs for: *${escape(query)}*\\.\\.\\.`
       );
 
-      // 2. Fetch jobs from JSearch (Vercel hobby allows up to 10s)
       const jobs = await fetchJobs(query);
 
-      // 3. Send results
       if (jobs === null) {
         await sendMessage(chatId,
-          "❌ *JSearch quota exceeded\\.* Check your RapidAPI dashboard — the free tier has a monthly cap\\."
+          "❌ *JSearch quota exceeded\\.* Check your RapidAPI dashboard \\— the free tier has a monthly cap\\."
         );
         return;
       }
@@ -61,7 +56,12 @@ export default async function handler(req, res) {
         return;
       }
 
-      await sendMessage(chatId, formatJobs(jobs));
+      await sendMessage(chatId, `🔥 *Found ${jobs.length} Jobs*\n━━━━━━━━━━━━━━`);
+
+      for (let i = 0; i < jobs.length; i++) {
+        await sendMessage(chatId, formatJob(jobs[i], i + 1));
+      }
+
       return;
     }
 
@@ -99,28 +99,31 @@ async function fetchJobs(query) {
   if (!Array.isArray(json.data)) return [];
 
   return json.data.slice(0, 5).map(j => ({
-    title      : j.job_title        || "Untitled Position",
-    company    : j.employer_name    || "Unknown Company",
-    location   : j.job_city && j.job_country
-                   ? `${j.job_city}, ${j.job_country}`
-                   : (j.job_country || "Remote"),
-    description: strip(j.job_description || ""),
-    link       : j.job_apply_link   || "",
+    title    : j.job_title        || "Untitled Position",
+    company  : j.employer_name    || "Unknown Company",
+    location : j.job_city && j.job_country
+                 ? `${j.job_city}, ${j.job_country}`
+                 : (j.job_country || "Remote"),
+    type     : j.job_employment_type || "",
+    posted   : j.job_posted_at_datetime_utc
+                 ? new Date(j.job_posted_at_datetime_utc).toDateString()
+                 : "",
+    link     : j.job_apply_link || "",
   }));
 }
 
-/* ─── Formatting ──────────────────────────────────────── */
+/* ─── Format a single job ─────────────────────────────── */
 
-function formatJobs(jobs) {
-  let t = "🔥 *Latest Job Openings*\n\n━━━━━━━━━━━━━━\n\n";
-  jobs.forEach((j, i) => {
-    t += `*${i + 1}\\. ${escape(j.title)}*\n`;
-    t += `🏢 ${escape(j.company)}\n`;
-    t += `📍 ${escape(j.location)}\n`;
-    t += `📝 _${escape(truncate(j.description, 300))}_\n\n`;
-    if (j.link) t += `🔗 [Apply Here](${j.link})\n`;
-    t += "\n━━━━━━━━━━━━━━\n\n";
-  });
+function formatJob(j, index) {
+  let t = "";
+  t += `*${index}\\. ${escape(j.title)}*\n`;
+  t += `🏢 ${escape(j.company)}\n`;
+  t += `📍 ${escape(j.location)}\n`;
+  if (j.type)   t += `💼 ${escape(j.type)}\n`;
+  if (j.posted) t += `📅 ${escape(j.posted)}\n`;
+  t += "\n";
+  if (j.link) t += `🔗 [View Full Description & Apply](${j.link})\n`;
+  t += `━━━━━━━━━━━━━━`;
   return t;
 }
 
@@ -147,12 +150,4 @@ async function sendMessage(chatId, text) {
 
 function escape(t = "") {
   return t.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
-}
-
-function strip(t) {
-  return t.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function truncate(t, n) {
-  return t.length <= n ? t : t.slice(0, n).trimEnd() + "...";
 }
