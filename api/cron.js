@@ -128,37 +128,26 @@ async function sendMessage(chatId, text) {
 
   const body = await res.text();
 
-  console.log("Telegram status:", res.status);
-  console.log("Telegram body:", body);
+  console.log("Telegram:", body);
 }
 
 /* ───────────────────────────────────── */
 
 function formatJob(j, index) {
 
-  let t = "";
+  return `
+🔥 JOB #${index}
+━━━━━━━━━━━━━━
+💼 ${j.title}
+🏢 ${j.company}
+📍 ${j.location}
+💼 ${j.type || "N/A"}
+📅 ${j.posted || "Recent"}
 
-  t += `*${index}\\. ${escape(j.title)}*\n`;
-  t += `🏢 ${escape(j.company)}\n`;
-  t += `📍 ${escape(j.location)}\n`;
-
-  if (j.type) {
-    t += `💼 ${escape(j.type)}\n`;
-  }
-
-  if (j.posted) {
-    t += `📅 ${escape(j.posted)}\n`;
-  }
-
-  t += "\n";
-
-  if (j.link) {
-    t += `🔗 [Apply Here](${j.link})\n`;
-  }
-
-  t += `━━━━━━━━━━━━━━`;
-
-  return t;
+🔗 Apply:
+${j.link || "N/A"}
+━━━━━━━━━━━━━━
+`;
 }
 
 /* ───────────────────────────────────── */

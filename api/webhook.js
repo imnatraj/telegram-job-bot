@@ -122,35 +122,41 @@ async function fetchJobs(query) {
 /* ─── Format a single job ─────────────────────────────── */
 
 function formatJob(j, index) {
-  let t = "";
-  t += `*${index}\\. ${escape(j.title)}*\n`;
-  t += `🏢 ${escape(j.company)}\n`;
-  t += `📍 ${escape(j.location)}\n`;
-  if (j.type)   t += `💼 ${escape(j.type)}\n`;
-  if (j.posted) t += `📅 ${escape(j.posted)}\n`;
-  t += "\n";
-  if (j.link) t += `🔗 [View Full Description & Apply](${j.link})\n`;
-  t += `━━━━━━━━━━━━━━`;
-  return t;
+
+  return `
+🔥 JOB #${index}
+━━━━━━━━━━━━━━
+💼 ${j.title}
+🏢 ${j.company}
+📍 ${j.location}
+💼 ${j.type || "N/A"}
+📅 ${j.posted || "Recent"}
+
+🔗 Apply:
+${j.link || "N/A"}
+━━━━━━━━━━━━━━
+`;
 }
 
 /* ─── Telegram sender ─────────────────────────────────── */
 
 async function sendMessage(chatId, text) {
+
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
-    method : "POST",
-    headers: { "Content-Type": "application/json" },
-    body   : JSON.stringify({
-      chat_id                  : chatId,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
       text,
-      parse_mode               : "MarkdownV2",
-      disable_web_page_preview : true,
+      disable_web_page_preview: true
     }),
   });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error("Telegram error:", res.status, body);
-  }
+
+  const body = await res.text();
+
+  console.log("Telegram:", body);
 }
 
 /* ─── Helpers ─────────────────────────────────────────── */
