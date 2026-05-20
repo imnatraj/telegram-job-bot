@@ -115,24 +115,21 @@ async function fetchJobs(query) {
 async function sendMessage(chatId, text) {
 
   const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
-    method : "POST",
+    method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       chat_id: chatId,
       text,
-      parse_mode: "MarkdownV2",
-      disable_web_page_preview: true,
+      disable_web_page_preview: true
     }),
   });
 
-  if (!res.ok) {
+  const body = await res.text();
 
-    const body = await res.text();
-
-    console.error("Telegram error:", res.status, body);
-  }
+  console.log("Telegram status:", res.status);
+  console.log("Telegram body:", body);
 }
 
 /* ───────────────────────────────────── */
