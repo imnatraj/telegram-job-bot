@@ -26,6 +26,15 @@ export default async function handler(req, res) {
 
       const result = await fetchJobs(q);
 
+      if (result === null) {
+        console.log("⚠️ Quota exceeded detected! Attempting to notify Telegram...");
+        await sendMessage(
+          CHAT_ID,
+          "❌ *JSearch quota exceeded.* Your RapidAPI free tier monthly cap has been reached."
+        );
+        return res.status(200).send("Quota Exceeded");
+      }
+
       if (result?.length) {
         jobs.push(...result);
       }
@@ -36,10 +45,12 @@ export default async function handler(req, res) {
     const seen = new Set();
 
     for (const j of jobs) {
+      // Use title and company as a fallback key if the link is missing
+      const uniqueKey = j.link || `${j.title}-${j.company}`;
 
-      if (j.link && !seen.has(j.link)) {
+      if (!seen.has(uniqueKey)) {
 
-        seen.add(j.link);
+        seen.add(uniqueKey);
 
         unique.push(j);
       }
@@ -47,9 +58,17 @@ export default async function handler(req, res) {
 
     const finalJobs = unique.slice(0, 10);
 
+    if (finalJobs.length === 0) {
+      await sendMessage(
+        CHAT_ID,
+        "😕 *Weekly Update: No new jobs found this week.*"
+      );
+      return res.status(200).send("No jobs");
+    }
+
     await sendMessage(
       CHAT_ID,
-      `🔥 *Daily Chennai & Remote Jobs*\n📅 12 PM Update\n━━━━━━━━━━━━━━`
+      `🔥 *Weekly Chennai & Remote Jobs*\n📅 Friday Update\n━━━━━━━━━━━━━━`
     );
 
     for (let i = 0; i < finalJobs.length; i++) {
@@ -90,6 +109,7 @@ async function fetchJobs(query) {
 
   console.log("JSearch status:", res.status);
 
+  if (res.status === 429) return null;
   if (!res.ok) return [];
 
   const json = await res.json();
